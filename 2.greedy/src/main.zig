@@ -9,7 +9,7 @@ const Graph = struct {
     pub fn init(allocator: std.mem.Allocator, n: i32) !Graph {
         const val_i32 = @divTrunc(n * (n - 1), 2);
         const size: usize = @intCast(val_i32);
-        var list = try std.ArrayList(i32).initCapacity(allocator, size);
+        var list: std.ArrayList(i32) = .empty;
         try list.resize(allocator, size);
         @memset(list.items, 0);
         return Graph{
