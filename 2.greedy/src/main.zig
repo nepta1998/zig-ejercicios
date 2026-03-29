@@ -44,8 +44,10 @@ pub fn main() !void {
     const random = prng.random();
 
     const n: i32 = 4;
-
-    var graph = try Graph.init(std.heap.page_allocator, n);
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+    defer _ = gpa.deinit();
+    var graph = try Graph.init(allocator, n);
     defer graph.deinit();
 
     for (0..@intCast(n)) |i| {
@@ -60,14 +62,11 @@ pub fn main() !void {
         std.debug.print("\n", .{});
     }
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const allocator = gpa.allocator();
-    defer _ = gpa.deinit();
     var table_col: std.ArrayList(i32) = .empty;
     defer table_col.deinit(allocator);
     try table_col.resize(allocator, n);
     @memset(table_col.items, -1);
-    try greedy(&graph, n, &table_col);
+    try greedy(&graph, n, &table_col, allocator);
     for (table_col.items) |c| {
         std.debug.print("{d} ", .{c});
     }
@@ -90,21 +89,20 @@ fn greedyc(g: *Graph, no_col: *std.ArrayList(i32), new_color: *std.ArrayList(i32
         }
     }
 }
-fn greedy(g: *Graph, nv: i32, table_col: *std.ArrayList(i32)) !void {
+fn greedy(g: *Graph, nv: i32, table_col: *std.ArrayList(i32), allocator: std.mem.Allocator) !void {
+    var arena = std.heap.ArenaAllocator.init(allocator);
+    defer arena.deinit();
+    const aa = arena.allocator();
+
     var color: i32 = 0;
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const allocator = gpa.allocator();
-    defer _ = gpa.deinit();
     var no_col: std.ArrayList(i32) = .empty;
-    defer no_col.deinit(allocator);
     var new_color: std.ArrayList(i32) = .empty;
-    defer new_color.deinit(allocator);
     var idx: i32 = 0;
     while (idx < nv) : (idx += 1) {
-        try no_col.append(allocator, idx);
+        try no_col.append(aa, idx);
     }
     while (no_col.items.len != 0) {
-        try greedyc(g, &no_col, &new_color, color, table_col, allocator);
+        try greedyc(g, &no_col, &new_color, color, table_col, aa);
         for (new_color.items) |q| {
             var left: usize = 0;
             var right = no_col.items.len;
