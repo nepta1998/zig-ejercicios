@@ -66,8 +66,17 @@ pub fn main() !void {
     defer table_col.deinit(allocator);
     try table_col.resize(allocator, n);
     @memset(table_col.items, -1);
+    var table_col2: std.ArrayList(i32) = .empty;
+    defer table_col2.deinit(allocator);
+    try table_col2.resize(allocator, n);
+    @memset(table_col2.items, -1);
     try greedy(&graph, n, &table_col, allocator);
+    try greedy_opt(&graph, n, &table_col2);
     for (table_col.items) |c| {
+        std.debug.print("{d} ", .{c});
+    }
+    std.debug.print("\n", .{});
+    for (table_col2.items) |c| {
         std.debug.print("{d} ", .{c});
     }
     std.debug.print("\n", .{});
@@ -121,5 +130,21 @@ fn greedy(g: *Graph, nv: i32, table_col: *std.ArrayList(i32), allocator: std.mem
         color += 1;
     }
 }
-
-fn greedy_opt() void {}
+fn greedy_opt(g: *Graph, comptime nv: i32, table_col: *std.ArrayList(i32)) !void {
+    var color_is_forbidden = [_]bool{false} ** nv;
+    table_col.items[0] = 0;
+    for (1..nv) |u| {
+        for (0..nv) |v| {
+            if (u != v and g.edge(@intCast(u), @intCast(v)).* == 1 and table_col.items[v] != -1) {
+                color_is_forbidden[@intCast(table_col.items[v])] = true;
+            }
+        }
+        for (0..nv) |c| {
+            if (!color_is_forbidden[c]) {
+                table_col.items[u] = @intCast(c);
+                break;
+            }
+        }
+        @memset(&color_is_forbidden, false);
+    }
+}
